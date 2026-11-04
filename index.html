@@ -8,7 +8,7 @@
         body {
             margin: 0;
             padding: 0;
-            background-color: #050709;
+            background-color: #04070a;
             overflow: hidden;
             color: #e0e0e0;
             font-family: 'Courier New', Courier, monospace;
@@ -30,7 +30,7 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 20px;
+            padding: 15px;
             box-sizing: border-box;
         }
         #hud {
@@ -38,40 +38,48 @@
             text-shadow: 2px 2px 6px #000;
             font-weight: bold;
             color: #00e5ff;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px 15px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px 15px;
             border-radius: 8px;
             border: 1px solid #005577;
             align-self: flex-start;
             pointer-events: auto;
         }
+        /* Controlli per smartphone stile D-Pad e Azione */
         #controls {
-            display: flex;
-            justify-content: space-between;
+            position: relative;
+            height: 160px;
             pointer-events: auto;
-            padding-bottom: 20px;
             width: 100%;
-            box-sizing: border-box;
         }
         .btn {
-            width: 80px;
-            height: 80px;
+            position: absolute;
+            width: 65px;
+            height: 65px;
             background-color: rgba(20, 35, 45, 0.85);
-            border: 3px solid #00e5ff;
+            border: 2px solid #00e5ff;
             border-radius: 50%;
             color: #00e5ff;
-            font-size: 32px;
+            font-size: 24px;
             display: flex;
             justify-content: center;
             align-items: center;
-            box-shadow: 0 0 15px rgba(0, 229, 255, 0.4);
+            box-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
             cursor: pointer;
             -webkit-tap-highlight-color: transparent;
         }
         .btn:active, .btn.pressed {
-            background-color: rgba(0, 229, 255, 0.4);
+            background-color: rgba(0, 229, 255, 0.5);
             transform: scale(0.92);
         }
+        /* Posizioni pulsanti direzionali (sinistra) */
+        #btnUp { left: 25px; bottom: 85px; }
+        #btnDown { left: 25px; bottom: 5px; }
+        #btnLeft { left: 5px; bottom: 45px; }
+        #btnRight { left: 85px; bottom: 45px; }
+        
+        /* Pulsante d'attacco (destra) */
+        #btnAction { right: 25px; bottom: 35px; width: 80px; height: 80px; font-size: 32px; border-color: #ff3333; color: #ff3333; }
     </style>
 </head>
 <body>
@@ -80,12 +88,15 @@
 
     <div id="ui-layer">
         <div id="hud">
-            LUCIUS | Vita: <span id="health">100</span>
+            LUCIUS | Vita: <span id="health">100</span> | Nemici: <span id="enemiesLeft">3</span>
         </div>
+        
         <div id="controls">
+            <div id="btnUp" class="btn">▲</div>
+            <div id="btnDown" class="btn">▼</div>
             <div id="btnLeft" class="btn">◀</div>
-            <div id="btnAction" class="btn">⚔️</div>
             <div id="btnRight" class="btn">▶</div>
+            <div id="btnAction" class="btn">⚔️</div>
         </div>
     </div>
 
@@ -93,175 +104,131 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const healthSpan = document.getElementById('health');
+        const enemiesLeftSpan = document.getElementById('enemiesLeft');
 
         let width = canvas.width = window.innerWidth;
         let height = canvas.height = window.innerHeight;
         let gameState = 'PLAYING';
 
+        // Caricamento del vero Sprite Sheet in formato JPG che hai caricato nella cartella assets
+        const spriteSheet = new Image();
+        spriteSheet.src = 'assets/spritesheet_lucius.jpg';
+        const TILE_SIZE = 64; // Dimensione standard del blocco nello sprite sheet
+
+        // Posizione iniziale di Lucius (vista dall'alto al centro)
         let player = {
-            x: 80,
-            y: height / 2 - 30,
+            x: width / 2,
+            y: height / 2,
             width: 50,
-            height: 70,
+            height: 50,
             health: 100,
-            speed: 5,
-            isAttacking: false
+            speed: 4,
+            direction: 'down',
+            isAttacking: false,
+            frameIndex: 0
         };
 
+        // Nemici disposti nella cripta vista dall'alto
         let enemies = [
-            { x: width - 220, y: height / 2 - 120, width: 50, height: 70, health: 50 },
-            { x: width - 150, y: height / 2, width: 50, height: 70, health: 50 },
-            { x: width - 240, y: height / 2 + 100, width: 50, height: 70, health: 50 }
+            { x: width * 0.75, y: height * 0.3, width: 50, height: 50, health: 50, frameIndex: 0 },
+            { x: width * 0.25, y: height * 0.7, width: 50, height: 50, health: 50, frameIndex: 0 },
+            { x: width * 0.80, y: height * 0.75, width: 50, height: 50, health: 50, frameIndex: 0 }
         ];
 
         let keys = {};
 
-        // Gestione universale dei pulsanti (funziona sia con il Mouse su PC che con il Touch su Cellulare)
-        function setupButton(id, keyName, actionCallback) {
+        // Configurazione tasti touch/mouse per il movimento a 360 gradi dall'alto
+        function setupButton(id, keyName) {
             const btn = document.getElementById(id);
-            
-            const pressOn = (e) => {
-                e.preventDefault();
-                keys[keyName] = true;
-                btn.classList.add('pressed');
-                if (actionCallback) actionCallback();
-            };
-            
-            const pressOff = (e) => {
-                e.preventDefault();
-                keys[keyName] = false;
-                btn.classList.remove('pressed');
-            };
+            const pressOn = (e) => { e.preventDefault(); keys[keyName] = true; btn.classList.add('pressed'); };
+            const pressOff = (e) => { e.preventDefault(); keys[keyName] = false; btn.classList.remove('pressed'); };
 
             btn.addEventListener('pointerdown', pressOn);
             btn.addEventListener('pointerup', pressOff);
             btn.addEventListener('pointerleave', pressOff);
         }
 
+        setupButton('btnUp', 'up');
+        setupButton('btnDown', 'down');
         setupButton('btnLeft', 'left');
         setupButton('btnRight', 'right');
-        setupButton('btnAction', 'action', () => {
-            player.isAttacking = true;
-            checkCombat();
-            setTimeout(() => player.isAttacking = false, 200);
+
+        // Pulsante Attacco
+        const btnAction = document.getElementById('btnAction');
+        btnAction.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            if (!player.isAttacking) {
+                player.isAttacking = true;
+                checkCombat();
+                setTimeout(() => player.isAttacking = false, 250);
+            }
         });
 
-        // Catacomba Dark Fantasy di sfondo
+        // Disegno dello sfondo della Cripta (Vista dall'alto)
         function drawBackground() {
-            let bgGradient = ctx.createLinearGradient(0, 0, 0, height);
-            bgGradient.addColorStop(0, '#04070a');
-            bgGradient.addColorStop(0.5, '#0a1118');
-            bgGradient.addColorStop(1, '#020305');
-            ctx.fillStyle = bgGradient;
+            // Sfondo scuro catacomba
+            ctx.fillStyle = '#05080d';
             ctx.fillRect(0, 0, width, height);
 
-            // Linee e rune di sfondo
-            ctx.strokeStyle = '#0e1c26';
-            ctx.lineWidth = 3;
-            for (let i = 0; i < width; i += 140) {
-                ctx.beginPath();
-                ctx.moveTo(i, 0);
-                ctx.lineTo(i, height);
-                ctx.stroke();
+            // Griglia del pavimento in pietra antica
+            ctx.strokeStyle = '#0d1821';
+            ctx.lineWidth = 2;
+            for (let x = 0; x < width; x += 100) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
             }
+            for (let y = 0; y < height; y += 100) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+            }
+
+            // Dettagli runici luminosi sul pavimento
+            ctx.strokeStyle = 'rgba(0, 229, 255, 0.05)';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(width/2, height/2, 180, 0, Math.PI * 2);
+            ctx.stroke();
         }
 
-        // Disegno vettoriale dettagliato di Lucius (Senza sfondi bianchi fastidiosi)
-        function drawPlayer() {
+        // Funzione per ritagliare e disegnare i personaggi dallo Sprite Sheet JPG
+        function drawSprite(entity, row, col, scale = 1.2) {
             ctx.save();
-            ctx.translate(player.x, player.y);
+            ctx.translate(entity.x, entity.y);
 
-            // Mantello
-            ctx.fillStyle = '#3a0f0f';
-            ctx.beginPath();
-            ctx.moveTo(5, 10); ctx.lineTo(-10, 65); ctx.lineTo(15, 65);
-            ctx.fill();
-
-            // Tunica
-            ctx.fillStyle = '#7a1c1c';
-            ctx.fillRect(8, 20, 34, 45);
-
-            // Armatura Lorica Segmentata
-            ctx.fillStyle = '#6b7c85';
-            ctx.fillRect(11, 22, 28, 28);
-            ctx.fillStyle = '#455158';
-            ctx.fillRect(11, 26, 28, 3);
-            ctx.fillRect(11, 33, 28, 3);
-            ctx.fillRect(11, 40, 28, 3);
-
-            // Elmo con cimiero
-            ctx.fillStyle = '#9cb0bc';
-            ctx.fillRect(9, 2, 30, 20);
-            ctx.fillStyle = '#b30000';
-            ctx.fillRect(19, -8, 10, 12);
-
-            // Scudo (Scutum)
-            ctx.fillStyle = '#8b1e0f';
-            ctx.fillRect(-8, 22, 14, 38);
-            ctx.strokeStyle = '#d4af37';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(-8, 22, 14, 38);
-            ctx.fillStyle = '#d4af37';
-            ctx.beginPath();
-            ctx.arc(-1, 41, 4, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Gladius (Spada) o fendente
-            if (player.isAttacking) {
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = '#ffffff';
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(40, 24, 30, 7);
-                ctx.shadowBlur = 0;
+            // Se l'immagine dello sprite sheet è caricata correttamente, la usa
+            if (spriteSheet.complete && spriteSheet.naturalWidth !== 0) {
+                ctx.drawImage(
+                    spriteSheet,
+                    col * TILE_SIZE, row * TILE_SIZE, // Coordinate nel foglio
+                    TILE_SIZE, TILE_SIZE,             // Taglio del singolo sprite
+                    - (TILE_SIZE * scale) / 2, - (TILE_SIZE * scale) / 2, // Centratura
+                    TILE_SIZE * scale, TILE_SIZE * scale
+                );
             } else {
-                ctx.fillStyle = '#d0d0d0';
-                ctx.fillRect(35, 28, 18, 5);
-                ctx.fillStyle = '#d4af37';
-                ctx.fillRect(33, 27, 4, 7);
+                // Fallback di sicurezza se l'immagine non si carica
+                ctx.fillStyle = (row === 0) ? '#8b0000' : '#1c242b';
+                ctx.fillRect(-25, -25, entity.width, entity.height);
             }
-
             ctx.restore();
         }
 
-        // Disegno dei Legionari Ombra (Senza sfondi bianchi)
-        function drawEnemies() {
+        function drawEntities() {
+            // Disegna Lucius (riga 0 o 1 dello sprite sheet)
+            let luciusRow = player.isAttacking ? 2 : 0;
+            drawSprite(player, luciusRow, Math.floor(player.frameIndex));
+
+            // Disegna i nemici (riga 4 dello sprite sheet)
             enemies.forEach(enemy => {
                 if (enemy.health > 0) {
-                    ctx.save();
-                    ctx.translate(enemy.x, enemy.y);
-
-                    // Aura spettrale
-                    ctx.fillStyle = 'rgba(0, 229, 255, 0.08)';
-                    ctx.beginPath();
-                    ctx.arc(25, 35, 35, 0, Math.PI * 2);
-                    ctx.fill();
-
-                    // Corpo e armatura corrotta
-                    ctx.fillStyle = '#16222b';
-                    ctx.fillRect(8, 20, 34, 45);
-                    ctx.fillStyle = '#2b3942';
-                    ctx.fillRect(11, 22, 28, 28);
-                    ctx.fillStyle = '#1a242c';
-                    ctx.fillRect(9, 2, 30, 20);
-
-                    // Occhi azzurri luminosi
-                    ctx.shadowBlur = 10;
-                    ctx.shadowColor = '#00e5ff';
-                    ctx.fillStyle = '#00ffff';
-                    ctx.fillRect(15, 9, 5, 5);
-                    ctx.fillRect(28, 9, 5, 5);
-                    ctx.shadowBlur = 0;
-
-                    ctx.restore();
+                    drawSprite(enemy, 4, Math.floor(enemy.frameIndex));
                 }
             });
         }
 
         function drawHUD() {
             healthSpan.innerText = Math.max(0, Math.floor(player.health));
+            enemiesLeftSpan.innerText = enemies.filter(e => e.health > 0).length;
 
             if (gameState === 'LOSE') {
-                ctx.fillStyle = 'rgba(2, 3, 5, 0.9)';
+                ctx.fillStyle = 'rgba(2, 3, 5, 0.92)';
                 ctx.fillRect(0, 0, width, height);
                 ctx.fillStyle = '#ff3333';
                 ctx.font = 'bold 26px Courier New';
@@ -269,7 +236,7 @@
                 ctx.fillText("ROMA È CADUTA NELLE TENEBRE", width / 2, height / 2);
             }
             if (gameState === 'WIN') {
-                ctx.fillStyle = 'rgba(2, 3, 5, 0.9)';
+                ctx.fillStyle = 'rgba(2, 3, 5, 0.92)';
                 ctx.fillRect(0, 0, width, height);
                 ctx.fillStyle = '#00e5ff';
                 ctx.font = 'bold 26px Courier New';
@@ -278,44 +245,61 @@
             }
         }
 
+        // Logica di gioco RPG Top-Down
         function update() {
             if (gameState !== 'PLAYING') return;
 
-            if (keys['left'] && player.x > 20) player.x -= player.speed;
-            if (keys['right'] && player.x < width - 70) player.x += player.speed;
+            let moving = false;
 
+            // Movimento a 360 gradi (alto, basso, sinistra, destra)
+            if (keys['up'] && player.y > 50) { player.y -= player.speed; player.direction = 'up'; moving = true; }
+            if (keys['down'] && player.y < height - 200) { player.y += player.speed; player.direction = 'down'; moving = true; }
+            if (keys['left'] && player.x > 50) { player.x -= player.speed; player.direction = 'left'; moving = true; }
+            if (keys['right'] && player.x < width - 50) { player.x += player.speed; player.direction = 'right'; moving = true; }
+
+            // Animazione fotogrammi se si muove
+            if (moving) {
+                player.frameIndex += 0.2;
+                if (player.frameIndex >= 4) player.frameIndex = 0;
+            } else {
+                player.frameIndex = 0;
+            }
+
+            // I nemici inseguono Lucius da qualsiasi direzione (RPG Top-Down)
             enemies.forEach(enemy => {
                 if (enemy.health > 0) {
-                    if (enemy.x > player.x) enemy.x -= 0.6;
-                    if (enemy.x < player.x) enemy.x += 0.6;
+                    let dx = player.x - enemy.x;
+                    let dy = player.y - enemy.y;
+                    let dist = Math.sqrt(dx * dx + dy * dy);
 
-                    if (
-                        player.x < enemy.x + enemy.width &&
-                        player.x + player.width > enemy.x &&
-                        player.y < enemy.y + enemy.height &&
-                        player.y + player.height > enemy.y
-                    ) {
-                        player.health -= 0.4;
+                    if (dist > 5) {
+                        enemy.x += (dx / dist) * 0.7;
+                        enemy.y += (dy / dist) * 0.7;
+                    }
+
+                    // Collisione / Danno al giocatore
+                    if (dist < 40) {
+                        player.health -= 0.35;
                         if (player.health <= 0) gameState = 'LOSE';
                     }
                 }
             });
 
-            enemies = enemies.filter(e => e.health > 0);
-
-            if (enemies.length === 0 && gameState === 'PLAYING') {
+            // Controllo Vittoria
+            let aliveEnemies = enemies.filter(e => e.health > 0);
+            if (aliveEnemies.length === 0 && gameState === 'PLAYING') {
                 gameState = 'WIN';
             }
         }
 
+        // Combattimento con raggio d'azione circolare
         function checkCombat() {
             enemies.forEach(enemy => {
-                if (
-                    player.x + player.width + 35 > enemy.x &&
-                    player.x < enemy.x + enemy.width &&
-                    player.y - 20 < enemy.y + enemy.height &&
-                    player.y + player.height + 20 > enemy.y
-                ) {
+                let dx = player.x - enemy.x;
+                let dy = player.y - enemy.y;
+                let dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < 80 && enemy.health > 0) {
                     enemy.health -= 25;
                 }
             });
@@ -324,13 +308,22 @@
         function gameLoop() {
             update();
             drawBackground();
-            drawPlayer();
-            drawEnemies();
+            drawEntities();
             drawHUD();
             requestAnimationFrame(gameLoop);
         }
 
-        gameLoop();
+        // Avvia il gioco quando lo sprite sheet JPG è pronto
+        spriteSheet.onload = function() {
+            gameLoop();
+        };
+
+        // Fallback nel caso l'immagine ci metta un attimo o dia problemi di caricamento
+        setTimeout(() => {
+            if (!spriteSheet.complete) {
+                gameLoop();
+            }
+        }, 1000);
 
         window.addEventListener('resize', () => {
             width = canvas.width = window.innerWidth;
