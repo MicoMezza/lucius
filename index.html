@@ -38,7 +38,7 @@
             text-shadow: 2px 2px 6px #000;
             font-weight: bold;
             color: #00e5ff;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.85);
             padding: 8px 15px;
             border-radius: 8px;
             border: 1px solid #005577;
@@ -106,46 +106,23 @@
         let height = canvas.height = window.innerHeight;
         let gameState = 'PLAYING';
 
-        // Caricamento dello sprite sheet JPG
-        const spriteSheet = new Image();
-        spriteSheet.src = 'assets/spritesheet_lucius.jpg';
-        
-        // Creiamo un canvas nascosto per ripulire lo sfondo bianco dell'immagine via codice
-        let processedSpriteSheet = null;
-        const TILE_SIZE = 64;
-
-        spriteSheet.onload = function() {
-            let tempCanvas = document.createElement('canvas');
-            tempCanvas.width = spriteSheet.width;
-            tempCanvas.height = spriteSheet.height;
-            let tempCtx = tempCanvas.getContext('2d');
-            tempCtx.drawImage(spriteSheet, 0, 0);
-
-            let imgData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-            let data = imgData.data;
-
-            // Rimuove il colore bianco (o quasi bianco) rendendolo trasparente
-            for (let i = 0; i < data.length; i += 4) {
-                let r = data[i], g = data[i+1], b = data[i+2];
-                // Se il pixel è bianco o grigio chiaro dello sfondo, lo rendiamo trasparente
-                if (r > 230 && g > 230 && b > 230) {
-                    data[i+3] = 0; // Alpha a 0 (trasparente)
-                }
-            }
-            tempCtx.putImageData(imgData, 0, 0);
-            processedSpriteSheet = tempCanvas;
-            gameLoop();
-        };
-
+        // Posizione iniziale di Lucius (RPG Top-Down)
         let player = {
-            x: width / 2, y: height / 2, width: 50, height: 50,
-            health: 100, speed: 4, isAttacking: false, frameIndex: 0
+            x: width / 2,
+            y: height / 2,
+            width: 44,
+            height: 60,
+            health: 100,
+            speed: 4.5,
+            direction: 'down',
+            isAttacking: false
         };
 
+        // Nemici nelle catacombe
         let enemies = [
-            { x: width * 0.75, y: height * 0.3, width: 50, height: 50, health: 50, frameIndex: 0 },
-            { x: width * 0.25, y: height * 0.7, width: 50, height: 50, health: 50, frameIndex: 0 },
-            { x: width * 0.80, y: height * 0.75, width: 50, height: 50, health: 50, frameIndex: 0 }
+            { x: width * 0.75, y: height * 0.3, width: 44, height: 60, health: 50 },
+            { x: width * 0.25, y: height * 0.7, width: 44, height: 60, health: 50 },
+            { x: width * 0.80, y: height * 0.75, width: 44, height: 60, health: 50 }
         ];
 
         let keys = {};
@@ -173,47 +150,113 @@
             }
         });
 
+        // Sfondo delle catacombe in stile dark fantasy romano
         function drawBackground() {
-            ctx.fillStyle = '#05080d';
+            let bgGradient = ctx.createLinearGradient(0, 0, 0, height);
+            bgGradient.addColorStop(0, '#030508');
+            bgGradient.addColorStop(0.5, '#080e14');
+            bgGradient.addColorStop(1, '#020305');
+            ctx.fillStyle = bgGradient;
             ctx.fillRect(0, 0, width, height);
 
-            ctx.strokeStyle = '#0d1821';
+            // Griglia delle pietre delle catacombe
+            ctx.strokeStyle = '#0c1620';
             ctx.lineWidth = 2;
-            for (let x = 0; x < width; x += 100) {
+            for (let x = 0; x < width; x += 120) {
                 ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
             }
-            for (let y = 0; y < height; y += 100) {
+            for (let y = 0; y < height; y += 120) {
                 ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
             }
+
+            // Rune azzurre luminose sul pavimento
+            ctx.strokeStyle = 'rgba(0, 229, 255, 0.08)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(width / 2, height / 2, 200, 0, Math.PI * 2);
+            ctx.stroke();
         }
 
-        function drawSprite(entity, row, col, scale = 1.3) {
+        // Disegno dettagliato di Lucius (Legionario Romano)
+        function drawPlayer() {
             ctx.save();
-            ctx.translate(entity.x, entity.y);
+            ctx.translate(player.x, player.y);
 
-            if (processedSpriteSheet) {
-                // Disegna ritagliando solo il riquadro corretto dello sprite ed evitando le scritte in alto
-                ctx.drawImage(
-                    processedSpriteSheet,
-                    col * TILE_SIZE, (row + 1) * TILE_SIZE, // Spostato di una riga in basso per saltare le intestazioni con le scritte
-                    TILE_SIZE, TILE_SIZE,
-                    - (TILE_SIZE * scale) / 2, - (TILE_SIZE * scale) / 2,
-                    TILE_SIZE * scale, TILE_SIZE * scale
-                );
+            // Mantello scuro
+            ctx.fillStyle = '#3a0f0f';
+            ctx.fillRect(-14, -18, 28, 36);
+
+            // Tunica rossa
+            ctx.fillStyle = '#7a1c1c';
+            ctx.fillRect(-12, -15, 24, 30);
+
+            // Armatura Lorica Segmentata
+            ctx.fillStyle = '#6b7c85';
+            ctx.fillRect(-10, -12, 20, 22);
+            ctx.fillStyle = '#323d44';
+            ctx.fillRect(-10, -6, 20, 2);
+            ctx.fillRect(-10, 0, 20, 2);
+
+            // Elmo romano con cimiero rosso
+            ctx.fillStyle = '#9cb0bc';
+            ctx.fillRect(-9, -24, 18, 14);
+            ctx.fillStyle = '#b30000';
+            ctx.fillRect(-3, -31, 6, 9);
+
+            // Scudo (Scutum) romano dorato/rosso
+            ctx.fillStyle = '#8b1e0f';
+            ctx.fillRect(-22, -10, 10, 26);
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(-22, -10, 10, 26);
+
+            // Gladius o fendente d'attacco luminoso
+            if (player.isAttacking) {
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#00e5ff';
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(10, -6, 22, 6);
+                ctx.shadowBlur = 0;
             } else {
-                ctx.fillStyle = (row === 0) ? '#8b0000' : '#1c242b';
-                ctx.fillRect(-25, -25, entity.width, entity.height);
+                ctx.fillStyle = '#d0d0d0';
+                ctx.fillRect(10, -2, 14, 4);
+                ctx.fillStyle = '#d4af37';
+                ctx.fillRect(8, -3, 3, 6);
             }
+
             ctx.restore();
         }
 
-        function drawEntities() {
-            let luciusRow = player.isAttacking ? 2 : 0;
-            drawSprite(player, luciusRow, Math.floor(player.frameIndex));
-
+        // Disegno dei Legionari Ombra (Nemici con occhi azzurri di brace)
+        function drawEnemies() {
             enemies.forEach(enemy => {
                 if (enemy.health > 0) {
-                    drawSprite(enemy, 3, Math.floor(enemy.frameIndex));
+                    ctx.save();
+                    ctx.translate(enemy.x, enemy.y);
+
+                    // Aura spettrale scura
+                    ctx.fillStyle = 'rgba(0, 229, 255, 0.06)';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 28, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Corpo corrotto
+                    ctx.fillStyle = '#16222b';
+                    ctx.fillRect(-12, -15, 24, 30);
+                    ctx.fillStyle = '#2b3942';
+                    ctx.fillRect(-10, -12, 20, 22);
+                    ctx.fillStyle = '#1a242c';
+                    ctx.fillRect(-9, -24, 18, 14);
+
+                    // Occhi azzurri fluorescenti
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#00e5ff';
+                    ctx.fillStyle = '#00ffff';
+                    ctx.fillRect(-5, -20, 3, 3);
+                    ctx.fillRect(2, -20, 3, 3);
+                    ctx.shadowBlur = 0;
+
+                    ctx.restore();
                 }
             });
         }
@@ -243,19 +286,12 @@
         function update() {
             if (gameState !== 'PLAYING') return;
 
-            let moving = false;
-            if (keys['up'] && player.y > 50) { player.y -= player.speed; moving = true; }
-            if (keys['down'] && player.y < height - 200) { player.y += player.speed; moving = true; }
-            if (keys['left'] && player.x > 50) { player.x -= player.speed; moving = true; }
-            if (keys['right'] && player.x < width - 50) { player.x += player.speed; moving = true; }
+            if (keys['up'] && player.y > 60) player.y -= player.speed;
+            if (keys['down'] && player.y < height - 180) player.y += player.speed;
+            if (keys['left'] && player.x > 50) player.x -= player.speed;
+            if (keys['right'] && player.x < width - 50) player.x += player.speed;
 
-            if (moving) {
-                player.frameIndex += 0.2;
-                if (player.frameIndex >= 4) player.frameIndex = 0;
-            } else {
-                player.frameIndex = 0;
-            }
-
+            // IA Nemici (inseguimento top-down)
             enemies.forEach(enemy => {
                 if (enemy.health > 0) {
                     let dx = player.x - enemy.x;
@@ -263,11 +299,11 @@
                     let dist = Math.sqrt(dx * dx + dy * dy);
 
                     if (dist > 5) {
-                        enemy.x += (dx / dist) * 0.7;
-                        enemy.y += (dy / dist) * 0.7;
+                        enemy.x += (dx / dist) * 0.65;
+                        enemy.y += (dy / dist) * 0.65;
                     }
 
-                    if (dist < 40) {
+                    if (dist < 35) {
                         player.health -= 0.35;
                         if (player.health <= 0) gameState = 'LOSE';
                     }
@@ -285,7 +321,7 @@
                 let dx = player.x - enemy.x;
                 let dy = player.y - enemy.y;
                 let dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < 80 && enemy.health > 0) {
+                if (dist < 75 && enemy.health > 0) {
                     enemy.health -= 25;
                 }
             });
@@ -294,17 +330,14 @@
         function gameLoop() {
             update();
             drawBackground();
-            drawEntities();
+            player.isAttacking ? null : null; // render order
+            drawPlayer();
+            drawEnemies();
             drawHUD();
             requestAnimationFrame(gameLoop);
         }
 
-        // Fallback se l'immagine impiega un attimo a caricarsi
-        setTimeout(() => {
-            if (!processedSpriteSheet) {
-                gameLoop();
-            }
-        }, 1500);
+        gameLoop();
 
         window.addEventListener('resize', () => {
             width = canvas.width = window.innerWidth;
