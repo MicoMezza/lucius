@@ -5,13 +5,73 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Lucius: L'Ombra di Roma</title>
     <style>
-        body { margin: 0; padding: 0; background-color: #050709; overflow: hidden; color: #e0e0e0; font-family: 'Courier New', Courier, monospace; user-select: none; -webkit-user-select: none; }
-        #gameCanvas { display: block; width: 100vw; height: 100vh; }
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; box-sizing: border-box; }
-        #hud { font-size: 22px; text-shadow: 2px 2px 6px #000; font-weight: bold; color: #00e5ff; background: rgba(0, 0, 0, 0.7); padding: 10px 20px; border-radius: 8px; border: 1px solid #005577; align-self: flex-start; }
-        #controls { display: flex; justify-content: space-between; pointer-events: auto; padding-bottom: 20px; }
-        .btn { width: 90px; height: 90px; background-color: rgba(20, 35, 45, 0.8); border: 3px solid #00e5ff; border-radius: 50%; color: #00e5ff; font-size: 40px; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 20px rgba(0, 229, 255, 0.5); transition: all 0.1s; }
-        .btn:active { background-color: rgba(0, 229, 255, 0.3); transform: scale(0.92); }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #050709;
+            overflow: hidden;
+            color: #e0e0e0;
+            font-family: 'Courier New', Courier, monospace;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        #gameCanvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        #hud {
+            font-size: 18px;
+            text-shadow: 2px 2px 6px #000;
+            font-weight: bold;
+            color: #00e5ff;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid #005577;
+            align-self: flex-start;
+            pointer-events: auto;
+        }
+        #controls {
+            display: flex;
+            justify-content: space-between;
+            pointer-events: auto;
+            padding-bottom: 20px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .btn {
+            width: 80px;
+            height: 80px;
+            background-color: rgba(20, 35, 45, 0.85);
+            border: 3px solid #00e5ff;
+            border-radius: 50%;
+            color: #00e5ff;
+            font-size: 32px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.4);
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn:active, .btn.pressed {
+            background-color: rgba(0, 229, 255, 0.4);
+            transform: scale(0.92);
+        }
     </style>
 </head>
 <body>
@@ -34,206 +94,213 @@
         const ctx = canvas.getContext('2d');
         const healthSpan = document.getElementById('health');
 
-        // Configurazione Gioco
         let width = canvas.width = window.innerWidth;
         let height = canvas.height = window.innerHeight;
         let gameState = 'PLAYING';
-        let frameCount = 0; // Contatore per animazione
 
-        // Caricamento Sprite Sheet (da caricare in /assets/ nel repo GitHub)
-        const spriteSheet = new Image();
-        spriteSheet.src = 'assets/spritesheet_lucius.jpg'; // Percorso dell'immagine che hai salvato
-        const TILE_SIZE = 64; // Dimensione di ogni singolo sprite
-
-        // --- Stato del Giocatore ---
         let player = {
-            x: 100, y: height / 2 - 40, width: TILE_SIZE, height: TILE_SIZE,
-            health: 100, speed: 4, direction: 'right', state: 'IDLE', frameIndex: 0, isAttacking: false, actionTimer: 0
+            x: 80,
+            y: height / 2 - 30,
+            width: 50,
+            height: 70,
+            health: 100,
+            speed: 5,
+            isAttacking: false
         };
 
-        // --- Stato dei Nemici ---
         let enemies = [
-            { x: width - 300, y: height / 2 - 150, width: TILE_SIZE, height: TILE_SIZE, health: 50, state: 'IDLE', frameIndex: 0, direction: 'left' },
-            { x: width - 200, y: height / 2, width: TILE_SIZE, height: TILE_SIZE, health: 50, state: 'IDLE', frameIndex: 0, direction: 'left' },
-            { x: width - 320, y: height / 2 + 150, width: TILE_SIZE, height: TILE_SIZE, health: 50, state: 'IDLE', frameIndex: 0, direction: 'left' }
+            { x: width - 220, y: height / 2 - 120, width: 50, height: 70, health: 50 },
+            { x: width - 150, y: height / 2, width: 50, height: 70, health: 50 },
+            { x: width - 240, y: height / 2 + 100, width: 50, height: 70, health: 50 }
         ];
 
-        // Input Touch
         let keys = {};
-        document.getElementById('btnLeft').addEventListener('touchstart', (e) => { keys['left'] = true; e.preventDefault(); });
-        document.getElementById('btnLeft').addEventListener('touchend', (e) => { keys['left'] = false; e.preventDefault(); });
-        document.getElementById('btnRight').addEventListener('touchstart', (e) => { keys['right'] = true; e.preventDefault(); });
-        document.getElementById('btnRight').addEventListener('touchend', (e) => { keys['right'] = false; e.preventDefault(); });
 
-        document.getElementById('btnAction').addEventListener('touchstart', (e) => { triggerAttack(); e.preventDefault(); });
-
-        function triggerAttack() {
-            if(player.isAttacking) return;
-            player.isAttacking = true;
-            player.actionTimer = 0;
-            player.state = 'ATTACK';
-            checkCombat();
-            setTimeout(() => {
-                player.isAttacking = false;
-                player.state = 'IDLE';
-            }, 400); // Durata attacco
-        }
-
-        // Mappa degli Sprite Sheet (riga, numero_frame)
-        const animations = {
-            'LUCIUS': {
-                'IDLE': { row: 0, frames: 4 },
-                'WALK': { row: 1, frames: 6 },
-                'ATTACK': { row: 2, frames: 4 },
-                'DEATH': { row: 3, frames: 3 }
-            },
-            'ENEMY': {
-                'IDLE': { row: 4, frames: 4 }, // Le righe continuano sotto
-                'WALK': { row: 5, frames: 6 },
-                'ATTACK': { row: 6, frames: 4 },
-                'DEATH': { row: 7, frames: 3 }
-            }
-        };
-
-        // Funzione di disegno sprite
-        function drawSprite(entity, animSet, scale = 1.5) {
-            const anim = animations[animSet][entity.state];
-            if (!anim) return;
-
-            // Calcola quale riga e colonna usare
-            const row = anim.row;
-            const col = Math.floor(entity.frameIndex);
-
-            ctx.save();
-            ctx.translate(entity.x + (TILE_SIZE * scale)/2, entity.y + (TILE_SIZE * scale)/2);
+        // Gestione universale dei pulsanti (funziona sia con il Mouse su PC che con il Touch su Cellulare)
+        function setupButton(id, keyName, actionCallback) {
+            const btn = document.getElementById(id);
             
-            // Specchia se si muove a sinistra
-            if (entity.direction === 'left') {
-                ctx.scale(-1, 1);
-            }
+            const pressOn = (e) => {
+                e.preventDefault();
+                keys[keyName] = true;
+                btn.classList.add('pressed');
+                if (actionCallback) actionCallback();
+            };
+            
+            const pressOff = (e) => {
+                e.preventDefault();
+                keys[keyName] = false;
+                btn.classList.remove('pressed');
+            };
 
-            ctx.drawImage(
-                spriteSheet,
-                col * TILE_SIZE, row * TILE_SIZE, // Punto di partenza (x, y) sul foglio
-                TILE_SIZE, TILE_SIZE, // Dimensione del frame originale
-                -(TILE_SIZE * scale)/2, -(TILE_SIZE * scale)/2, // Posizione e dimensione sul canvas
-                TILE_SIZE * scale, TILE_SIZE * scale
-            );
-            ctx.restore();
+            btn.addEventListener('pointerdown', pressOn);
+            btn.addEventListener('pointerup', pressOff);
+            btn.addEventListener('pointerleave', pressOff);
         }
 
+        setupButton('btnLeft', 'left');
+        setupButton('btnRight', 'right');
+        setupButton('btnAction', 'action', () => {
+            player.isAttacking = true;
+            checkCombat();
+            setTimeout(() => player.isAttacking = false, 200);
+        });
+
+        // Catacomba Dark Fantasy di sfondo
         function drawBackground() {
             let bgGradient = ctx.createLinearGradient(0, 0, 0, height);
             bgGradient.addColorStop(0, '#04070a');
+            bgGradient.addColorStop(0.5, '#0a1118');
             bgGradient.addColorStop(1, '#020305');
             ctx.fillStyle = bgGradient;
             ctx.fillRect(0, 0, width, height);
 
-            // Dettagli pavimento e ombre
-            ctx.fillStyle = '#0f1820';
-            for(let s = 0; s < width; s += 100) {
-                ctx.fillRect(s, height - 20, 50, 20);
+            // Linee e rune di sfondo
+            ctx.strokeStyle = '#0e1c26';
+            ctx.lineWidth = 3;
+            for (let i = 0; i < width; i += 140) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, height);
+                ctx.stroke();
             }
         }
 
-        function updateEntityAnimation(entity, animSet) {
-            const anim = animations[animSet][entity.state];
-            if(!anim) return;
+        // Disegno vettoriale dettagliato di Lucius (Senza sfondi bianchi fastidiosi)
+        function drawPlayer() {
+            ctx.save();
+            ctx.translate(player.x, player.y);
 
-            // Velocità di animazione (più alto il valore, più lento)
-            let animSpeed = 0.15;
-            if(entity.state === 'WALK') animSpeed = 0.25;
-            if(entity.state === 'ATTACK') animSpeed = 0.35;
+            // Mantello
+            ctx.fillStyle = '#3a0f0f';
+            ctx.beginPath();
+            ctx.moveTo(5, 10); ctx.lineTo(-10, 65); ctx.lineTo(15, 65);
+            ctx.fill();
 
-            entity.frameIndex += animSpeed;
-            if (entity.frameIndex >= anim.frames) {
-                if(entity.state === 'DEATH') {
-                    // Resta sull'ultimo frame se è morto
-                    entity.frameIndex = anim.frames - 1;
-                } else {
-                    entity.frameIndex = 0; // Loop
-                }
+            // Tunica
+            ctx.fillStyle = '#7a1c1c';
+            ctx.fillRect(8, 20, 34, 45);
+
+            // Armatura Lorica Segmentata
+            ctx.fillStyle = '#6b7c85';
+            ctx.fillRect(11, 22, 28, 28);
+            ctx.fillStyle = '#455158';
+            ctx.fillRect(11, 26, 28, 3);
+            ctx.fillRect(11, 33, 28, 3);
+            ctx.fillRect(11, 40, 28, 3);
+
+            // Elmo con cimiero
+            ctx.fillStyle = '#9cb0bc';
+            ctx.fillRect(9, 2, 30, 20);
+            ctx.fillStyle = '#b30000';
+            ctx.fillRect(19, -8, 10, 12);
+
+            // Scudo (Scutum)
+            ctx.fillStyle = '#8b1e0f';
+            ctx.fillRect(-8, 22, 14, 38);
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(-8, 22, 14, 38);
+            ctx.fillStyle = '#d4af37';
+            ctx.beginPath();
+            ctx.arc(-1, 41, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Gladius (Spada) o fendente
+            if (player.isAttacking) {
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#ffffff';
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(40, 24, 30, 7);
+                ctx.shadowBlur = 0;
+            } else {
+                ctx.fillStyle = '#d0d0d0';
+                ctx.fillRect(35, 28, 18, 5);
+                ctx.fillStyle = '#d4af37';
+                ctx.fillRect(33, 27, 4, 7);
             }
+
+            ctx.restore();
         }
 
-        function drawEntities() {
-            // Disegna e anima i nemici
+        // Disegno dei Legionari Ombra (Senza sfondi bianchi)
+        function drawEnemies() {
             enemies.forEach(enemy => {
-                if(enemy.health > 0) {
-                     updateEntityAnimation(enemy, 'ENEMY');
-                }
-                 drawSprite(enemy, 'ENEMY');
-            });
+                if (enemy.health > 0) {
+                    ctx.save();
+                    ctx.translate(enemy.x, enemy.y);
 
-            // Disegna e anima Lucius
-            updateEntityAnimation(player, 'LUCIUS');
-            drawSprite(player, 'LUCIUS');
+                    // Aura spettrale
+                    ctx.fillStyle = 'rgba(0, 229, 255, 0.08)';
+                    ctx.beginPath();
+                    ctx.arc(25, 35, 35, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Corpo e armatura corrotta
+                    ctx.fillStyle = '#16222b';
+                    ctx.fillRect(8, 20, 34, 45);
+                    ctx.fillStyle = '#2b3942';
+                    ctx.fillRect(11, 22, 28, 28);
+                    ctx.fillStyle = '#1a242c';
+                    ctx.fillRect(9, 2, 30, 20);
+
+                    // Occhi azzurri luminosi
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#00e5ff';
+                    ctx.fillStyle = '#00ffff';
+                    ctx.fillRect(15, 9, 5, 5);
+                    ctx.fillRect(28, 9, 5, 5);
+                    ctx.shadowBlur = 0;
+
+                    ctx.restore();
+                }
+            });
         }
 
         function drawHUD() {
             healthSpan.innerText = Math.max(0, Math.floor(player.health));
 
             if (gameState === 'LOSE') {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+                ctx.fillStyle = 'rgba(2, 3, 5, 0.9)';
                 ctx.fillRect(0, 0, width, height);
-                ctx.fillStyle = '#ff4444';
-                ctx.font = 'bold 40px Courier New';
+                ctx.fillStyle = '#ff3333';
+                ctx.font = 'bold 26px Courier New';
                 ctx.textAlign = 'center';
                 ctx.fillText("ROMA È CADUTA NELLE TENEBRE", width / 2, height / 2);
             }
-             if (gameState === 'WIN') {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+            if (gameState === 'WIN') {
+                ctx.fillStyle = 'rgba(2, 3, 5, 0.9)';
                 ctx.fillRect(0, 0, width, height);
                 ctx.fillStyle = '#00e5ff';
-                ctx.font = 'bold 40px Courier New';
+                ctx.font = 'bold 26px Courier New';
                 ctx.textAlign = 'center';
                 ctx.fillText("CRIPTA PURIFICATA! IL MALE È RESPINTO", width / 2, height / 2);
             }
         }
 
-        // Logica di Gioco
         function update() {
             if (gameState !== 'PLAYING') return;
 
-            // Movimento Giocatore
-            if (keys['left'] && player.x > 20) {
-                player.x -= player.speed;
-                player.direction = 'left';
-                if(!player.isAttacking) player.state = 'WALK';
-            } else if (keys['right'] && player.x < width - 100) {
-                player.x += player.speed;
-                player.direction = 'right';
-                if(!player.isAttacking) player.state = 'WALK';
-            } else {
-                if(!player.isAttacking) player.state = 'IDLE';
-            }
+            if (keys['left'] && player.x > 20) player.x -= player.speed;
+            if (keys['right'] && player.x < width - 70) player.x += player.speed;
 
-            // IA Semplice Nemici
             enemies.forEach(enemy => {
-                if(enemy.health > 0) {
-                    // Movimento verso il giocatore
-                    if (enemy.x > player.x + 50) {
-                        enemy.x -= 0.5; enemy.direction = 'left'; enemy.state = 'WALK';
-                    } else if (enemy.x < player.x - 50) {
-                        enemy.x += 0.5; enemy.direction = 'right'; enemy.state = 'WALK';
-                    } else {
-                         enemy.state = 'IDLE'; // Vicino, fermo
-                    }
+                if (enemy.health > 0) {
+                    if (enemy.x > player.x) enemy.x -= 0.6;
+                    if (enemy.x < player.x) enemy.x += 0.6;
 
-                    // Danno al giocatore
-                    if (player.x < enemy.x + 40 && player.x + 40 > enemy.x &&
-                        player.y < enemy.y + 40 && player.y + 40 > enemy.y) {
-                        player.health -= 0.3;
-                        if(player.health <= 0) {
-                            gameState = 'LOSE';
-                            player.state = 'DEATH';
-                            player.frameIndex = 0;
-                        }
+                    if (
+                        player.x < enemy.x + enemy.width &&
+                        player.x + player.width > enemy.x &&
+                        player.y < enemy.y + enemy.height &&
+                        player.y + player.height > enemy.y
+                    ) {
+                        player.health -= 0.4;
+                        if (player.health <= 0) gameState = 'LOSE';
                     }
                 }
             });
 
-            // Rimozione nemici sconfitti
             enemies = enemies.filter(e => e.health > 0);
 
             if (enemies.length === 0 && gameState === 'PLAYING') {
@@ -242,42 +309,32 @@
         }
 
         function checkCombat() {
-            // Raggio d'attacco di Lucius
-            const attackRange = 80;
             enemies.forEach(enemy => {
-                 if (player.x + attackRange > enemy.x && player.x < enemy.x + 40 &&
-                    player.y - 40 < enemy.y + 40 && player.y + 40 > enemy.y
+                if (
+                    player.x + player.width + 35 > enemy.x &&
+                    player.x < enemy.x + enemy.width &&
+                    player.y - 20 < enemy.y + enemy.height &&
+                    player.y + player.height + 20 > enemy.y
                 ) {
-                    enemy.health -= 25; // Danno del gladio
-                    if(enemy.health <= 0) {
-                        enemy.state = 'DEATH';
-                        enemy.frameIndex = 0;
-                    } else {
-                        // Potremmo aggiungere un effetto "hit" qui
-                    }
+                    enemy.health -= 25;
                 }
             });
         }
 
-        // Ciclo Principale
         function gameLoop() {
             update();
             drawBackground();
-            drawEntities();
+            drawPlayer();
+            drawEnemies();
             drawHUD();
             requestAnimationFrame(gameLoop);
         }
 
-        // Avvia quando l'immagine è caricata
-        spriteSheet.onload = function() {
-            gameLoop();
-        };
+        gameLoop();
 
-        // Gestione Resize Schermo
         window.addEventListener('resize', () => {
             width = canvas.width = window.innerWidth;
             height = canvas.height = window.innerHeight;
-            player.y = height / 2 - 40; // Reset posizione verticale
         });
     </script>
 </body>
