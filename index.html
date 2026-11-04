@@ -110,16 +110,16 @@
         let player = {
             x: width / 2,
             y: height / 2,
-            radius: 28,
             health: 100,
             speed: 4.5,
+            direction: 'down', // Direzione iniziale ('up', 'down', 'left', 'right')
             isAttacking: false
         };
 
         let enemies = [
-            { x: width * 0.75, y: height * 0.3, radius: 28, health: 50 },
-            { x: width * 0.25, y: height * 0.7, radius: 28, health: 50 },
-            { x: width * 0.80, y: height * 0.75, radius: 28, health: 50 }
+            { x: width * 0.75, y: height * 0.3, health: 50 },
+            { x: width * 0.25, y: height * 0.7, health: 50 },
+            { x: width * 0.80, y: height * 0.75, health: 50 }
         ];
 
         let keys = {};
@@ -147,169 +147,140 @@
             }
         });
 
-        // Sfondo dettagliato delle catacombe romane
         function drawBackground() {
             let bgGradient = ctx.createLinearGradient(0, 0, 0, height);
-            bgGradient.addColorStop(0, '#020305');
+            bgGradient.addColorStop(0, '#030508');
             bgGradient.addColorStop(0.5, '#070c12');
             bgGradient.addColorStop(1, '#010204');
             ctx.fillStyle = bgGradient;
             ctx.fillRect(0, 0, width, height);
 
-            // Blocs di pietra e muri antichi
-            ctx.strokeStyle = '#0b131a';
+            ctx.strokeStyle = '#0c1620';
             ctx.lineWidth = 2;
-            for (let x = 0; x < width; x += 100) {
+            for (let x = 0; x < width; x += 120) {
                 ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
             }
-            for (let y = 0; y < height; y += 100) {
+            for (let y = 0; y < height; y += 120) {
                 ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
             }
 
-            // Grande cerchio runico magico azzurro sul pavimento
-            ctx.save();
-            ctx.strokeStyle = 'rgba(0, 229, 255, 0.12)';
+            // Geometria runica sul pavimento
+            ctx.strokeStyle = 'rgba(0, 229, 255, 0.1)';
             ctx.lineWidth = 4;
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = '#00e5ff';
             ctx.beginPath();
-            ctx.arc(width / 2, height / 2, 220, 0, Math.PI * 2);
+            ctx.arc(width / 2, height / 2, 200, 0, Math.PI * 2);
             ctx.stroke();
-            ctx.beginPath();
-            ctx.arc(width / 2, height / 2, 140, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.restore();
         }
 
-        // --- LUCIUS: Dettagli altissimi (Armatura Lorica, Scudo, Elmo con cimiero) ---
+        // --- LUCIUS CON DIREZIONE DINAMICA ---
         function drawPlayer() {
             ctx.save();
             ctx.translate(player.x, player.y);
 
-            // Ombra sotto il personaggio
+            // Ombra
             ctx.fillStyle = 'rgba(0,0,0,0.6)';
             ctx.beginPath();
-            ctx.arc(0, 22, 22, 0, Math.PI * 2);
+            ctx.arc(0, 24, 20, 0, Math.PI * 2);
             ctx.fill();
 
-            // Mantello scuro consunto
-            ctx.fillStyle = '#2a0a0a';
-            ctx.beginPath();
-            ctx.moveTo(-16, -10); ctx.lineTo(-24, 20); ctx.lineTo(0, 26); ctx.lineTo(16, 20); ctx.lineTo(12, -10);
-            ctx.fill();
-
-            // Tunica rossa romana
-            ctx.fillStyle = '#8b1e1e';
-            ctx.beginPath();
-            ctx.arc(0, 0, 20, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Armatura Lorica Segmentata (Placche d'acciaio con riflessi metallici)
-            let armorGrad = ctx.createLinearGradient(-15, -15, 15, 15);
-            armorGrad.addColorStop(0, '#9ab4c3');
-            armorGrad.addColorStop(0.5, '#5c6e7a');
-            armorGrad.addColorStop(1, '#343f47');
-            ctx.fillStyle = armorGrad;
-            ctx.beginPath();
-            ctx.roundRect(-14, -14, 28, 28, 6);
-            ctx.fill();
-
-            // Linee delle fasce dell'armatura
-            ctx.strokeStyle = '#222b30';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(-14, -6); ctx.lineTo(14, -6);
-            ctx.moveTo(-14, 2); ctx.lineTo(14, 2);
-            ctx.moveTo(-14, 10); ctx.lineTo(14, 10);
-            ctx.stroke();
-
-            // Elmo Romano (Galea) dettagliato con cimiero crestato rosso
-            ctx.fillStyle = '#b0c4de';
-            ctx.beginPath();
-            ctx.arc(0, -12, 13, Math.PI, 0, false);
-            ctx.fill();
-            // Cimiero del centurione
-            ctx.fillStyle = '#cc0000';
-            ctx.beginPath();
-            ctx.roundRect(-4, -26, 8, 16, 3);
-            ctx.fill();
-
-            // Scudo Romano (Scutum) con bordi dorati e umbone centrale
-            ctx.fillStyle = '#7a140a';
-            ctx.strokeStyle = '#d4af37';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.roundRect(-26, -16, 12, 32, 4);
-            ctx.fill();
-            ctx.stroke();
-            // Umbone dorato dello scudo
-            ctx.fillStyle = '#ffd700';
-            ctx.beginPath();
-            ctx.arc(-20, 0, 4, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Gladius / Fendente d'attacco epico
-            if (player.isAttacking) {
-                ctx.save();
-                ctx.shadowBlur = 25;
-                ctx.shadowColor = '#00ffff';
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath();
-                ctx.arc(0, 0, 38, -Math.PI/2, Math.PI/2);
-                ctx.lineTo(0,0);
-                ctx.fill();
-                ctx.restore();
-            } else {
-                ctx.fillStyle = '#e0e0e0';
-                ctx.fillRect(14, -3, 16, 5);
-                ctx.fillStyle = '#d4af37';
-                ctx.fillRect(12, -5, 4, 9);
+            // Render in base alla direzione in cui si muove
+            if (player.direction === 'up') {
+                // Vista di spalle
+                ctx.fillStyle = '#2a0a0a'; // Mantello coprente
+                ctx.fillRect(-14, -16, 28, 32);
+                ctx.fillStyle = '#9cb0bc'; // Retro elmo
+                ctx.beginPath(); ctx.arc(0, -10, 11, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#cc0000'; // Cimiero visto da dietro
+                ctx.fillRect(-3, -24, 6, 14);
+            } 
+            else if (player.direction === 'down') {
+                // Vista frontale
+                ctx.fillStyle = '#3a0f0f'; // Mantello dietro
+                ctx.fillRect(-14, -14, 28, 28);
+                ctx.fillStyle = '#7a1c1c'; // Tunica
+                ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fill();
+                // Armatura Lorica
+                ctx.fillStyle = '#6b7c85';
+                ctx.fillRect(-12, -12, 24, 22);
+                // Elmo e cimiero frontale
+                ctx.fillStyle = '#b0c4de';
+                ctx.beginPath(); ctx.arc(0, -12, 12, Math.PI, 0, false); ctx.fill();
+                ctx.fillStyle = '#cc0000';
+                ctx.fillRect(-3, -25, 6, 13);
+                // Scudo a sinistra
+                ctx.fillStyle = '#7a140a'; ctx.strokeStyle = '#d4af37'; ctx.lineWidth = 2;
+                ctx.fillRect(-22, -14, 10, 26); ctx.strokeRect(-22, -14, 10, 26);
+                // Gladius o attacco frontale
+                if (player.isAttacking) {
+                    ctx.shadowBlur = 20; ctx.shadowColor = '#00ffff';
+                    ctx.fillStyle = '#ffffff'; ctx.fillRect(12, -6, 24, 6);
+                    ctx.shadowBlur = 0;
+                } else {
+                    ctx.fillStyle = '#d0d0d0'; ctx.fillRect(12, -2, 14, 4);
+                }
+            } 
+            else if (player.direction === 'left') {
+                // Vista laterale sinistra
+                ctx.fillStyle = '#7a1c1c'; ctx.fillRect(-10, -12, 20, 24);
+                ctx.fillStyle = '#6b7c85'; ctx.fillRect(-8, -10, 16, 20); // Armatura
+                ctx.fillStyle = '#b0c4de'; ctx.beginPath(); ctx.arc(-2, -12, 11, 0, Math.PI * 2); ctx.fill(); // Elmo
+                ctx.fillStyle = '#cc0000'; ctx.fillRect(-6, -23, 10, 6); // Cimiero laterale
+                // Scudo davanti a sinistra
+                ctx.fillStyle = '#7a140a'; ctx.strokeStyle = '#d4af37'; ctx.lineWidth = 2;
+                ctx.fillRect(-18, -14, 8, 26); ctx.strokeRect(-18, -14, 8, 26);
+                if (player.isAttacking) {
+                    ctx.shadowBlur = 20; ctx.shadowColor = '#00ffff';
+                    ctx.fillStyle = '#ffffff'; ctx.fillRect(-32, -4, 20, 6);
+                    ctx.shadowBlur = 0;
+                }
+            } 
+            else if (player.direction === 'right') {
+                // Vista laterale destra
+                ctx.fillStyle = '#7a1c1c'; ctx.fillRect(-10, -12, 20, 24);
+                ctx.fillStyle = '#6b7c85'; ctx.fillRect(-8, -10, 16, 20); // Armatura
+                ctx.fillStyle = '#b0c4de'; ctx.beginPath(); ctx.arc(2, -12, 11, 0, Math.PI * 2); ctx.fill(); // Elmo
+                ctx.fillStyle = '#cc0000'; ctx.fillRect(-4, -23, 10, 6); // Cimiero laterale
+                // Scudo dietro a destra
+                ctx.fillStyle = '#7a140a'; ctx.strokeStyle = '#d4af37'; ctx.lineWidth = 2;
+                ctx.fillRect(10, -14, 8, 26); ctx.strokeRect(10, -14, 8, 26);
+                if (player.isAttacking) {
+                    ctx.shadowBlur = 20; ctx.shadowColor = '#00ffff';
+                    ctx.fillStyle = '#ffffff'; ctx.fillRect(12, -4, 20, 6);
+                    ctx.shadowBlur = 0;
+                } else {
+                    ctx.fillStyle = '#d0d0d0'; ctx.fillRect(12, -2, 14, 4);
+                }
             }
 
             ctx.restore();
         }
 
-        // --- NEMICI: Legionari Ombra con armatura corrotta e occhi di brace azzurra ---
+        // --- NEMICI CORROTTI ---
         function drawEnemies() {
             enemies.forEach(enemy => {
                 if (enemy.health > 0) {
                     ctx.save();
                     ctx.translate(enemy.x, enemy.y);
 
-                    // Ombra/Aura spettrale intensa attorno al soldato corrotto
                     ctx.save();
-                    ctx.shadowBlur = 18;
+                    ctx.shadowBlur = 15;
                     ctx.shadowColor = '#00e5ff';
-                    ctx.fillStyle = 'rgba(0, 229, 255, 0.12)';
-                    ctx.beginPath();
-                    ctx.arc(0, 0, 28, 0, Math.PI * 2);
-                    ctx.fill();
+                    ctx.fillStyle = 'rgba(0, 229, 255, 0.1)';
+                    ctx.beginPath(); ctx.arc(0, 0, 26, 0, Math.PI * 2); ctx.fill();
                     ctx.restore();
 
-                    // Corpo oscuro e melmoso
                     ctx.fillStyle = '#111922';
-                    ctx.beginPath();
-                    ctx.arc(0, 0, 20, 0, Math.PI * 2);
-                    ctx.fill();
+                    ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fill();
 
-                    // Armatura arrugginita/corrotta
                     ctx.fillStyle = '#1f2a33';
-                    ctx.beginPath();
-                    ctx.roundRect(-14, -14, 28, 28, 5);
-                    ctx.fill();
+                    ctx.fillRect(-12, -12, 24, 24);
 
-                    // Elmo antico corrotto
-                    ctx.fillStyle = '#121a21';
-                    ctx.beginPath();
-                    ctx.arc(0, -12, 12, Math.PI, 0, false);
-                    ctx.fill();
-
-                    // Occhi con bagliore azzurro spettrale intenso
-                    ctx.shadowBlur = 12;
+                    // Occhi azzurri luminosi
+                    ctx.shadowBlur = 10;
                     ctx.shadowColor = '#00ffff';
                     ctx.fillStyle = '#00ffff';
-                    ctx.fillRect(-5, -15, 4, 4);
-                    ctx.fillRect(2, -15, 4, 4);
+                    ctx.fillRect(-5, -15, 3, 3);
+                    ctx.fillRect(2, -15, 3, 3);
                     ctx.shadowBlur = 0;
 
                     ctx.restore();
@@ -325,35 +296,42 @@
                 ctx.fillStyle = 'rgba(2, 3, 5, 0.94)';
                 ctx.fillRect(0, 0, width, height);
                 ctx.fillStyle = '#ff3333';
-                ctx.shadowBlur = 20;
-                ctx.shadowColor = '#ff0000';
                 ctx.font = 'bold 28px Courier New';
                 ctx.textAlign = 'center';
                 ctx.fillText("ROMA È CADUTA NELLE TENEBRE", width / 2, height / 2);
-                ctx.shadowBlur = 0;
             }
             if (gameState === 'WIN') {
                 ctx.fillStyle = 'rgba(2, 3, 5, 0.94)';
                 ctx.fillRect(0, 0, width, height);
                 ctx.fillStyle = '#00e5ff';
-                ctx.shadowBlur = 20;
-                ctx.shadowColor = '#00e5ff';
                 ctx.font = 'bold 28px Courier New';
                 ctx.textAlign = 'center';
                 ctx.fillText("CRIPTA PURIFICATA! IL MALE È RESPINTO", width / 2, height / 2);
-                ctx.shadowBlur = 0;
             }
         }
 
         function update() {
             if (gameState !== 'PLAYING') return;
 
-            if (keys['up'] && player.y > 60) player.y -= player.speed;
-            if (keys['down'] && player.y < height - 200) player.y += player.speed;
-            if (keys['left'] && player.x > 50) player.x -= player.speed;
-            if (keys['right'] && player.x < width - 50) player.x += player.speed;
+            // Aggiorna posizione e IMPOSTA LA DIREZIONE in base al tasto premuto
+            if (keys['up'] && player.y > 60) {
+                player.y -= player.speed;
+                player.direction = 'up';
+            }
+            if (keys['down'] && player.y < height - 200) {
+                player.y += player.speed;
+                player.direction = 'down';
+            }
+            if (keys['left'] && player.x > 50) {
+                player.x -= player.speed;
+                player.direction = 'left';
+            }
+            if (keys['right'] && player.x < width - 50) {
+                player.x += player.speed;
+                player.direction = 'right';
+            }
 
-            // Inseguimento dei nemici
+            // Inseguimento nemici
             enemies.forEach(enemy => {
                 if (enemy.health > 0) {
                     let dx = player.x - enemy.x;
@@ -361,11 +339,11 @@
                     let dist = Math.sqrt(dx * dx + dy * dy);
 
                     if (dist > 5) {
-                        enemy.x += (dx / dist) * 0.7;
-                        enemy.y += (dy / dist) * 0.7;
+                        enemy.x += (dx / dist) * 0.65;
+                        enemy.y += (dy / dist) * 0.65;
                     }
 
-                    if (dist < 40) {
+                    if (dist < 35) {
                         player.health -= 0.35;
                         if (player.health <= 0) gameState = 'LOSE';
                     }
@@ -383,7 +361,7 @@
                 let dx = player.x - enemy.x;
                 let dy = player.y - enemy.y;
                 let dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < 85 && enemy.health > 0) {
+                if (dist < 75 && enemy.health > 0) {
                     enemy.health -= 25;
                 }
             });
