@@ -45,7 +45,6 @@
             align-self: flex-start;
             pointer-events: auto;
         }
-        /* Controlli per smartphone stile D-Pad e Azione */
         #controls {
             position: relative;
             height: 160px;
@@ -72,13 +71,10 @@
             background-color: rgba(0, 229, 255, 0.5);
             transform: scale(0.92);
         }
-        /* Posizioni pulsanti direzionali (sinistra) */
         #btnUp { left: 25px; bottom: 85px; }
         #btnDown { left: 25px; bottom: 5px; }
         #btnLeft { left: 5px; bottom: 45px; }
         #btnRight { left: 85px; bottom: 45px; }
-        
-        /* Pulsante d'attacco (destra) */
         #btnAction { right: 25px; bottom: 35px; width: 80px; height: 80px; font-size: 32px; border-color: #ff3333; color: #ff3333; }
     </style>
 </head>
@@ -110,25 +106,42 @@
         let height = canvas.height = window.innerHeight;
         let gameState = 'PLAYING';
 
-        // Caricamento del vero Sprite Sheet in formato JPG che hai caricato nella cartella assets
+        // Caricamento dello sprite sheet JPG
         const spriteSheet = new Image();
         spriteSheet.src = 'assets/spritesheet_lucius.jpg';
-        const TILE_SIZE = 64; // Dimensione standard del blocco nello sprite sheet
+        
+        // Creiamo un canvas nascosto per ripulire lo sfondo bianco dell'immagine via codice
+        let processedSpriteSheet = null;
+        const TILE_SIZE = 64;
 
-        // Posizione iniziale di Lucius (vista dall'alto al centro)
-        let player = {
-            x: width / 2,
-            y: height / 2,
-            width: 50,
-            height: 50,
-            health: 100,
-            speed: 4,
-            direction: 'down',
-            isAttacking: false,
-            frameIndex: 0
+        spriteSheet.onload = function() {
+            let tempCanvas = document.createElement('canvas');
+            tempCanvas.width = spriteSheet.width;
+            tempCanvas.height = spriteSheet.height;
+            let tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(spriteSheet, 0, 0);
+
+            let imgData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+            let data = imgData.data;
+
+            // Rimuove il colore bianco (o quasi bianco) rendendolo trasparente
+            for (let i = 0; i < data.length; i += 4) {
+                let r = data[i], g = data[i+1], b = data[i+2];
+                // Se il pixel è bianco o grigio chiaro dello sfondo, lo rendiamo trasparente
+                if (r > 230 && g > 230 && b > 230) {
+                    data[i+3] = 0; // Alpha a 0 (trasparente)
+                }
+            }
+            tempCtx.putImageData(imgData, 0, 0);
+            processedSpriteSheet = tempCanvas;
+            gameLoop();
         };
 
-        // Nemici disposti nella cripta vista dall'alto
+        let player = {
+            x: width / 2, y: height / 2, width: 50, height: 50,
+            health: 100, speed: 4, isAttacking: false, frameIndex: 0
+        };
+
         let enemies = [
             { x: width * 0.75, y: height * 0.3, width: 50, height: 50, health: 50, frameIndex: 0 },
             { x: width * 0.25, y: height * 0.7, width: 50, height: 50, health: 50, frameIndex: 0 },
@@ -137,12 +150,10 @@
 
         let keys = {};
 
-        // Configurazione tasti touch/mouse per il movimento a 360 gradi dall'alto
         function setupButton(id, keyName) {
             const btn = document.getElementById(id);
             const pressOn = (e) => { e.preventDefault(); keys[keyName] = true; btn.classList.add('pressed'); };
             const pressOff = (e) => { e.preventDefault(); keys[keyName] = false; btn.classList.remove('pressed'); };
-
             btn.addEventListener('pointerdown', pressOn);
             btn.addEventListener('pointerup', pressOff);
             btn.addEventListener('pointerleave', pressOff);
@@ -153,9 +164,7 @@
         setupButton('btnLeft', 'left');
         setupButton('btnRight', 'right');
 
-        // Pulsante Attacco
-        const btnAction = document.getElementById('btnAction');
-        btnAction.addEventListener('pointerdown', (e) => {
+        document.getElementById('btnAction').addEventListener('pointerdown', (e) => {
             e.preventDefault();
             if (!player.isAttacking) {
                 player.isAttacking = true;
@@ -164,13 +173,10 @@
             }
         });
 
-        // Disegno dello sfondo della Cripta (Vista dall'alto)
         function drawBackground() {
-            // Sfondo scuro catacomba
             ctx.fillStyle = '#05080d';
             ctx.fillRect(0, 0, width, height);
 
-            // Griglia del pavimento in pietra antica
             ctx.strokeStyle = '#0d1821';
             ctx.lineWidth = 2;
             for (let x = 0; x < width; x += 100) {
@@ -179,31 +185,22 @@
             for (let y = 0; y < height; y += 100) {
                 ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
             }
-
-            // Dettagli runici luminosi sul pavimento
-            ctx.strokeStyle = 'rgba(0, 229, 255, 0.05)';
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.arc(width/2, height/2, 180, 0, Math.PI * 2);
-            ctx.stroke();
         }
 
-        // Funzione per ritagliare e disegnare i personaggi dallo Sprite Sheet JPG
-        function drawSprite(entity, row, col, scale = 1.2) {
+        function drawSprite(entity, row, col, scale = 1.3) {
             ctx.save();
             ctx.translate(entity.x, entity.y);
 
-            // Se l'immagine dello sprite sheet è caricata correttamente, la usa
-            if (spriteSheet.complete && spriteSheet.naturalWidth !== 0) {
+            if (processedSpriteSheet) {
+                // Disegna ritagliando solo il riquadro corretto dello sprite ed evitando le scritte in alto
                 ctx.drawImage(
-                    spriteSheet,
-                    col * TILE_SIZE, row * TILE_SIZE, // Coordinate nel foglio
-                    TILE_SIZE, TILE_SIZE,             // Taglio del singolo sprite
-                    - (TILE_SIZE * scale) / 2, - (TILE_SIZE * scale) / 2, // Centratura
+                    processedSpriteSheet,
+                    col * TILE_SIZE, (row + 1) * TILE_SIZE, // Spostato di una riga in basso per saltare le intestazioni con le scritte
+                    TILE_SIZE, TILE_SIZE,
+                    - (TILE_SIZE * scale) / 2, - (TILE_SIZE * scale) / 2,
                     TILE_SIZE * scale, TILE_SIZE * scale
                 );
             } else {
-                // Fallback di sicurezza se l'immagine non si carica
                 ctx.fillStyle = (row === 0) ? '#8b0000' : '#1c242b';
                 ctx.fillRect(-25, -25, entity.width, entity.height);
             }
@@ -211,14 +208,12 @@
         }
 
         function drawEntities() {
-            // Disegna Lucius (riga 0 o 1 dello sprite sheet)
             let luciusRow = player.isAttacking ? 2 : 0;
             drawSprite(player, luciusRow, Math.floor(player.frameIndex));
 
-            // Disegna i nemici (riga 4 dello sprite sheet)
             enemies.forEach(enemy => {
                 if (enemy.health > 0) {
-                    drawSprite(enemy, 4, Math.floor(enemy.frameIndex));
+                    drawSprite(enemy, 3, Math.floor(enemy.frameIndex));
                 }
             });
         }
@@ -245,19 +240,15 @@
             }
         }
 
-        // Logica di gioco RPG Top-Down
         function update() {
             if (gameState !== 'PLAYING') return;
 
             let moving = false;
+            if (keys['up'] && player.y > 50) { player.y -= player.speed; moving = true; }
+            if (keys['down'] && player.y < height - 200) { player.y += player.speed; moving = true; }
+            if (keys['left'] && player.x > 50) { player.x -= player.speed; moving = true; }
+            if (keys['right'] && player.x < width - 50) { player.x += player.speed; moving = true; }
 
-            // Movimento a 360 gradi (alto, basso, sinistra, destra)
-            if (keys['up'] && player.y > 50) { player.y -= player.speed; player.direction = 'up'; moving = true; }
-            if (keys['down'] && player.y < height - 200) { player.y += player.speed; player.direction = 'down'; moving = true; }
-            if (keys['left'] && player.x > 50) { player.x -= player.speed; player.direction = 'left'; moving = true; }
-            if (keys['right'] && player.x < width - 50) { player.x += player.speed; player.direction = 'right'; moving = true; }
-
-            // Animazione fotogrammi se si muove
             if (moving) {
                 player.frameIndex += 0.2;
                 if (player.frameIndex >= 4) player.frameIndex = 0;
@@ -265,7 +256,6 @@
                 player.frameIndex = 0;
             }
 
-            // I nemici inseguono Lucius da qualsiasi direzione (RPG Top-Down)
             enemies.forEach(enemy => {
                 if (enemy.health > 0) {
                     let dx = player.x - enemy.x;
@@ -277,7 +267,6 @@
                         enemy.y += (dy / dist) * 0.7;
                     }
 
-                    // Collisione / Danno al giocatore
                     if (dist < 40) {
                         player.health -= 0.35;
                         if (player.health <= 0) gameState = 'LOSE';
@@ -285,20 +274,17 @@
                 }
             });
 
-            // Controllo Vittoria
             let aliveEnemies = enemies.filter(e => e.health > 0);
             if (aliveEnemies.length === 0 && gameState === 'PLAYING') {
                 gameState = 'WIN';
             }
         }
 
-        // Combattimento con raggio d'azione circolare
         function checkCombat() {
             enemies.forEach(enemy => {
                 let dx = player.x - enemy.x;
                 let dy = player.y - enemy.y;
                 let dist = Math.sqrt(dx * dx + dy * dy);
-
                 if (dist < 80 && enemy.health > 0) {
                     enemy.health -= 25;
                 }
@@ -313,17 +299,12 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // Avvia il gioco quando lo sprite sheet JPG è pronto
-        spriteSheet.onload = function() {
-            gameLoop();
-        };
-
-        // Fallback nel caso l'immagine ci metta un attimo o dia problemi di caricamento
+        // Fallback se l'immagine impiega un attimo a caricarsi
         setTimeout(() => {
-            if (!spriteSheet.complete) {
+            if (!processedSpriteSheet) {
                 gameLoop();
             }
-        }, 1000);
+        }, 1500);
 
         window.addEventListener('resize', () => {
             width = canvas.width = window.innerWidth;
