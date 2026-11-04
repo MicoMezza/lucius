@@ -107,49 +107,19 @@
         let height = canvas.height = window.innerHeight;
         let gameState = 'PLAYING';
 
-        // CARICAMENTO E PROCESSAMENTO DELLO SPRITE SHEET (Rimuove il nero)
-        const rawSpriteSheet = new Image();
-        rawSpriteSheet.src = 'assets/lucius_2.jpg'; 
+        // CARICAMENTO DELLO SPRITE SHEET NATIVO (PNG trasparente)
+        const spriteSheet = new Image();
+        spriteSheet.src = 'assets/lucius.png'; 
 
-        let processedSpriteSheet = null;
-
-        // Parametri VITALI per il ritaglio dello sprite sheet
-        // Devi aggiustare questi due numeri se vedi il personaggio tagliato
-        let spriteFrameWidth = 444;  // Larghezza in pixel di un singolo fotogramma
-        let spriteFrameHeight = 606; // Altezza in pixel di un singolo fotogramma
-
-        rawSpriteSheet.onload = function() {
-            // Calcoliamo la larghezza del frame dinamicamente (es. se ci sono 9 colonne)
-            // Se l'immagine è 576px larga e ha 9 colonne, ogni frame è 576 / 9 = 64px
-            // spriteFrameWidth = rawSpriteSheet.width / NUMERO_DI_COLONNE; 
-            
-            let tempCanvas = document.createElement('canvas');
-            tempCanvas.width = rawSpriteSheet.width;
-            tempCanvas.height = rawSpriteSheet.height;
-            let tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
-            
-            tempCtx.drawImage(rawSpriteSheet, 0, 0);
-            let imgData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-            let data = imgData.data;
-
-            // Rimuove lo sfondo nero
-            for (let i = 0; i < data.length; i += 4) {
-                if (data[i] < 20 && data[i+1] < 20 && data[i+2] < 20) {
-                    data[i+3] = 0; 
-                }
-            }
-            tempCtx.putImageData(imgData, 0, 0);
-            processedSpriteSheet = tempCanvas;
-            
-            // Inizia il loop del gioco solo quando l'immagine è pronta
-            gameLoop();
-        };
+        // Dimensioni calcolate perfettamente sui tuoi dati (4337x2422 / 10x4)
+        let spriteFrameWidth = 434;  
+        let spriteFrameHeight = 606; 
 
         let player = {
             x: width / 2,
             y: height / 2,
-            width: 64, // Dimensione a schermo
-            height: 64, // Dimensione a schermo
+            width: 64,  // Dimensione a schermo del personaggio (ridimensionato automaticamente)
+            height: 64, 
             health: 100,
             speed: 4.5,
             direction: 'down',
@@ -184,7 +154,6 @@
             if (!player.isAttacking) {
                 player.isAttacking = true;
                 checkCombat();
-                // Mostra il frame di attacco per un quarto di secondo
                 setTimeout(() => player.isAttacking = false, 250);
             }
         });
@@ -211,24 +180,17 @@
             ctx.save();
             ctx.translate(player.x, player.y);
 
-            // Mappatura delle righe del tuo file lucius_2.jpg
-            // 0 = Sinistra, 1 = Alto, 2 = Destra, 3 = Giù (o simile)
+            // Mappatura delle 4 righe del tuo sprite sheet
             let rowY = 0; 
-            if (player.direction === 'left') rowY = 0; 
-            else if (player.direction === 'up') rowY = 1; 
+            if (player.direction === 'down') rowY = 0; 
+            else if (player.direction === 'left') rowY = 1; 
             else if (player.direction === 'right') rowY = 2; 
-            else if (player.direction === 'down') rowY = 3; 
+            else if (player.direction === 'up') rowY = 3; 
 
-            // Se sta attaccando, usiamo la parte finale della riga (es. frame da 5 a 8)
-            let currentFrameX = player.frameX;
-            if (player.isAttacking) {
-                currentFrameX = 5; // Salta al frame dell'animazione di attacco
-            }
-
-            if (processedSpriteSheet) {
+            if (spriteSheet.complete && spriteSheet.naturalWidth !== 0) {
                 ctx.drawImage(
-                    processedSpriteSheet,
-                    currentFrameX * spriteFrameWidth, rowY * spriteFrameHeight, spriteFrameWidth, spriteFrameHeight,
+                    spriteSheet,
+                    player.frameX * spriteFrameWidth, rowY * spriteFrameHeight, spriteFrameWidth, spriteFrameHeight,
                     -player.width / 2, -player.height / 2, player.width, player.height
                 );
             } else {
@@ -290,10 +252,10 @@
             if (keys['left'] && player.x > 50) { player.x -= player.speed; player.direction = 'left'; moving = true; }
             if (keys['right'] && player.x < width - 50) { player.x += player.speed; player.direction = 'right'; moving = true; }
 
-            // Animazione camminata (primi 4 o 5 frame della riga)
-            if (moving && !player.isAttacking) {
-                player.frameX = (Math.floor(Date.now() / 150) % 5); 
-            } else if (!player.isAttacking) {
+            if (moving) {
+                // Scorriamo tra le 10 colonne disponibili per l'animazione
+                player.frameX = (Math.floor(Date.now() / 120) % 10); 
+            } else {
                 player.frameX = 0; 
             }
 
@@ -340,13 +302,9 @@
             drawHUD();
             requestAnimationFrame(gameLoop);
         }
-        
-        // Timeout di emergenza se l'immagine fallisce
-        setTimeout(() => {
-             if(!processedSpriteSheet) {
-                 gameLoop();
-             }
-        }, 1500);
+
+        // Avvio del gioco
+        gameLoop();
 
         window.addEventListener('resize', () => {
             width = canvas.width = window.innerWidth;
