@@ -111,9 +111,10 @@
         const spriteSheet = new Image();
         spriteSheet.src = 'assets/lucius_walk_4x4_128.png'; 
 
-        // Dimensioni calcolate perfettamente sui tuoi dati (4337x2422 / 10x4)
-        let spriteFrameWidth = 128;  
-        let spriteFrameHeight = 128; 
+        // Sprite sheet 512x512: griglia 4x4, celle da 128x128
+        const SPRITE_COLS = 4;
+        let spriteFrameWidth = 128;
+        let spriteFrameHeight = 128;
 
         let player = {
             x: width / 2,
@@ -253,8 +254,8 @@
             if (keys['right'] && player.x < width - 50) { player.x += player.speed; player.direction = 'right'; moving = true; }
 
             if (moving) {
-                // Scorriamo tra le 10 colonne disponibili per l'animazione
-                player.frameX = (Math.floor(Date.now() / 120) % 10); 
+                // Lo sprite sheet ha 4 colonne (frame 0-3) per ogni direzione
+                player.frameX = (Math.floor(Date.now() / 120) % SPRITE_COLS);
             } else {
                 player.frameX = 0; 
             }
