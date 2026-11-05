@@ -1,0 +1,6 @@
+{
+  "appId": "com.domenico.lucius",
+  "appName": "Lucius",
+  "webDir": ".",
+  "bundledWebRuntime": false
+}
