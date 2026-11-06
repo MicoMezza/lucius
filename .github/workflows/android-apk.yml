@@ -1,4 +1,4 @@
-name: Build Lucius Release APK
+name: Build Lucius APK Installabile
 
 on:
   push:
@@ -43,21 +43,21 @@ jobs:
           npx cap add android
           npx cap sync android
 
-      - name: Build APK Release
+      - name: Build APK Debug Installabile
         working-directory: ./android
         run: ./gradlew assembleDebug
 
-      - name: Upload APK Artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: lucius-release-apk
-          path: android/app/build/outputs/apk/release/app-release-unsigned.apk
+          name: lucius-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: Lucius v1.0.${{ github.run_number }}
-          files: android/app/build/outputs/apk/release/app-release-unsigned.apk
+          files: android/app/build/outputs/apk/debug/app-debug.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
