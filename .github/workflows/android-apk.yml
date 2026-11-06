@@ -24,13 +24,25 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Fix webDir and prepare www
+        run: |
+          mkdir -p www
+          cp index.html www/index.html || true
+          cp -r assets www/ || true
+          echo '{"appId":"com.micomezza.lucius","appName":"Lucius","webDir":"www","bundledWebRuntime":false}' > capacitor.config.json
+          cat capacitor.config.json
+
       - name: Install dependencies
         run: npm install
 
       - name: Add Android platform
         run: |
-          npx cap add android || echo "android exists"
-          npx cap sync android --deployment
+          rm -rf android
+          npx cap add android
+          npx cap sync android
 
       - name: Build APK Debug
         working-directory: ./android
