@@ -1,6 +1,6 @@
 {
-  "appId": "com.domenico.lucius",
+  "appId": "com.micomezza.lucius",
   "appName": "Lucius",
-  "webDir": ".",
+  "webDir": "www",
   "bundledWebRuntime": false
 }
