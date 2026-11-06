@@ -8,27 +8,35 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-      - uses: actions/setup-java@v4
+          cache: npm
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
-      - name: Install Capacitor
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Add Android platform
         run: |
-          npm install
-      - name: Init Capacitor + Copy Web
-        run: |
-          npx cap add android || true
-          npx cap copy android
-      - name: Build APK Debug
-        run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          npx cap add android || echo "android already exists"
+          npx cap sync android --deployment
+
+      - name: Build APK
+        working-directory: ./android
+        run: ./gradlew assembleDebug
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
