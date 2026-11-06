@@ -50,11 +50,11 @@ jobs:
           name: lucius-release-apk
           path: android/app/build/outputs/apk/release/app-release-unsigned.apk
 
-      - name: Create 【entity-GitHub¦canonical_name=GitHub】 Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
-          name: Lucius v1.0.${{ 【entity-github¦canonical_name=GitHub】.run_number }}
+          name: Lucius v1.0.${{ github.run_number }}
           files: android/app/build/outputs/apk/release/app-release-unsigned.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
